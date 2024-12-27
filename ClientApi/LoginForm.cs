@@ -67,7 +67,7 @@ namespace ClientApi
                 // All data correct
                 else
                 {
-                    GameForm form = new GameForm(player);
+                    FormClientBoard form = new FormClientBoard();
                     form.ShowDialog();
                 }
             }
