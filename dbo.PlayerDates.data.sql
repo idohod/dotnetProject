@@ -1,0 +1,10 @@
+﻿INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (1, '2024-03-16 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (1, '2024-09-05 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (1, '2024-09-01 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (2, '2024-05-20 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (2, '2024-09-25 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (2, '2024-11-23 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (3, '2024-07-31 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (3, '2024-01-14 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (3, '2024-08-19 15:20:28');
+INSERT INTO [dbo].[PlayerDates] ([Id], [DateValue]) VALUES (4, '2024-03-06 15:20:28');

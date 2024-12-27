@@ -1,0 +1,2 @@
+﻿ALTER TABLE TblPlayers
+DROP COLUMN Dates;

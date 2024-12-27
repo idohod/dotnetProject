@@ -1,0 +1,71 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert-success text-center">
+    @TempData["SuccessMessage"]
+    </div>
+}
+else
+{
+      <div class="text-left sm-6">
+        <h2 class="mystyle">Please register</h2>
+      </div>
+
+      <div class="d-flex justify-content-center">
+        <div>
+          <form method="post" autocomplete="on" action="">
+            <div class="row mb-3">
+              <div class="col-md-12 d-grid" style="grid-template-columns: 120px 200px auto;">
+                <label for="PlayerName" class="align-self-center">Name:</label>
+                <input asp-for="Player.Name" class="form-control" />
+                <span asp-validation-for="Player.Name" class="text-danger" style="margin-left: 10px;"></span>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12 d-grid" style="grid-template-columns: 120px 200px auto;">
+                <label for="PlayerId" class="align-self-center">Id:</label>
+                <input asp-for="Player.Id" class="form-control" />
+                <span asp-validation-for="Player.Id" class="text-danger" style="margin-left: 10px; "></span>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12 d-grid" style="grid-template-columns: 120px 200px auto;">
+                <label for="PlayerPhone" class="align-self-center">Phone:</label>
+                <input asp-for="Player.Phone" class="form-control" />
+                <span asp-validation-for="Player.Phone" class="text-danger" style="margin-left: 10px;"></span>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12 d-grid" style="grid-template-columns: 120px 200px auto;">
+                <label for="PlayerCountry" class="align-self-center">Country:</label>
+
+                <select asp-for="Player.Country" class="form-control">
+                  <option value="">-- Select Country --</option>
+                  <option value="Israel">Israel</option>
+                  <option value="United States">United States</option>
+                  <option value="Canada">Canada</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Germany">Germany</option>
+                  </select>
+
+                <span asp-validation-for="Player.Country" class="text-danger" style="margin-left: 10px;"></span>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12 text-center">
+                <button asp-page="" class="btn btn-primary">Submit!</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+}

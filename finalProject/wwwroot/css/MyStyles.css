@@ -1,0 +1,11 @@
+﻿
+h2.mystyle {
+    text-align: center;
+    color: red;
+    font-style: italic;
+    margin-top: 100px;
+    margin-bottom: 50px;
+}
+input asp-for{
+    height: 40px;
+}

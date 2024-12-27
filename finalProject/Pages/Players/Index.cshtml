@@ -1,0 +1,159 @@
+﻿@page
+@model finalProject.Pages.Players.IndexModel
+
+@{
+    ViewData["Title"] = "Players Database";
+}
+
+<h1>Players Database</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+
+<form action="" method="post">
+    <button asp-page-handler="Sort" class="btn btn-primary"> Sort All by name (case-insensitive)</button>
+    <button asp-page-handler="CaseSen" class="btn btn-primary"> Sort All and show dates</button>
+    <button asp-page-handler="GroupByCountry" class="btn btn-primary"> Group By Country</button>
+    <button asp-page-handler="GroupByGames" class="btn btn-primary"> Group By Num Of Games</button>
+    <button asp-page-handler="NameAndGames" class="btn btn-primary"> Name And Games</button>
+    <button asp-page-handler="FirstByCountry" class="btn btn-primary"> FirstByCountry</button>
+
+
+</form>
+@if(Model.PlayersGroupedByGames !=null && Model.PlayersGroupedByGames.Count > 0)
+{
+    @foreach (var group in Model.PlayersGroupedByGames)
+    {
+        <h2>Games @group.Key</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Country</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                @foreach (var player in group.Value)
+                {
+                    <tr>
+                        <td>@player.Name</td>
+                        <td>@player.Phone</td>
+                        <td>@player.Country</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+}
+
+<!-- Display Sorted Players (Case-Insensitive) -->
+@if (Model.TblPlayers != null && Model.TblPlayers.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Country</th>
+                <th>Num of Games</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in Model.TblPlayers)
+            {
+                <tr>
+                    <td>@player.Name</td>
+                    <td>@player.Phone</td>
+                    <td>@player.Country</td>
+                    <td>@player.NumOfGames</td>
+                    <td>
+                        <a asp-page="./Edit" asp-route-id="@player.Id">Edit</a> |
+                        <a asp-page="./Details" asp-route-id="@player.Id">Details</a> |
+                        <a asp-page="./Delete" asp-route-id="@player.Id">Delete</a>|
+                    </td>
+                   
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+<!-- Display name and game -->
+@if (Model.nameAndGames != null && Model.nameAndGames.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>               
+                <th>Num of Games</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in Model.nameAndGames)
+            {
+                <tr>
+                    <td>@player.Name</td>                   
+                    <td>@player.NumOfGames</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (Model.TblDates != null && Model.TblDates.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Last Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in Model.TblDates)
+            {
+                <tr>
+                    <td>@player.Name</td>
+                    <td>@player.DateValue?.ToString("yyyy-MM-dd")</td> <!-- Format the date if needed -->
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+
+<!-- Display Grouped Players by Country -->
+@if (Model.PlayersGroupedByCountry != null && Model.PlayersGroupedByCountry.Count > 0)
+{
+    @foreach (var group in Model.PlayersGroupedByCountry)
+    {
+        <h2>@group.Key</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Country</th>
+                    <th>Num of Games</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var player in group.Value)
+                {
+                    <tr>
+                        <td>@player.Name</td>
+                        <td>@player.Phone</td>
+                        <td>@player.Country</td>
+                        <td>@player.NumOfGames</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
