@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
-namespace Client
+namespace ClientApi
 {
     public class PieceModels
     {
@@ -45,8 +46,8 @@ namespace Client
 
         public class Board
         {
-            private const int ROWS = 8;   // 8 rows
-            private const int COLS = 4;   // 4 columns (Half Chess)
+            private const int ROWS = 8;
+            private const int COLS = 4;
             private readonly Cell[,] cells;
 
             public Board()
@@ -80,6 +81,7 @@ namespace Client
 
         public class HalfChessGame
         {
+            public event Action MoveMade;
             public Board GameBoard { get; private set; }
             public bool IsWhiteTurn { get; private set; }
 
@@ -119,24 +121,173 @@ namespace Client
             {
                 var fromCell = GameBoard.GetCell(fromRow, fromCol);
                 var toCell = GameBoard.GetCell(toRow, toCol);
+
                 if (fromCell == null || toCell == null) return false;
                 if (fromCell.OccupiedBy == null) return false;
 
                 // Must move your own color
                 if (fromCell.OccupiedBy.IsWhite != IsWhiteTurn) return false;
 
+                // Prevent moving onto a square occupied by the same player's piece
+                if (toCell.OccupiedBy != null && toCell.OccupiedBy.IsWhite == IsWhiteTurn) return false;
+
                 // Check piece-specific rules
-                if (!IsLegalMove(fromCell.OccupiedBy, fromRow, fromCol, toRow, toCol))
-                    return false;
+                if (!IsLegalMove(fromCell.OccupiedBy, fromRow, fromCol, toRow, toCol)) return false;
 
                 // Capture or move (overwrite)
                 toCell.OccupiedBy = fromCell.OccupiedBy;
                 fromCell.OccupiedBy = null;
 
+                // Check if the king has any available moves
+                if (IsKingInCheck(IsWhiteTurn) && !HasAvailableMoves(IsWhiteTurn))
+                {
+                    // Revert the move
+                    toCell.OccupiedBy = null;
+                    fromCell.OccupiedBy = toCell.OccupiedBy;
+                    return false;
+                }
+
                 // Switch turns
                 IsWhiteTurn = !IsWhiteTurn;
+
+                MoveMade?.Invoke();
+
                 return true;
             }
+
+            private bool HasAvailableMoves(bool isWhite)
+            {
+                for (int r = 0; r < 8; r++)
+                {
+                    for (int c = 0; c < 4; c++)
+                    {
+                        var cell = GameBoard.GetCell(r, c);
+                        if (cell?.OccupiedBy != null && cell.OccupiedBy.IsWhite == isWhite)
+                        {
+                            foreach (var move in GetLegalMoves(r, c))
+                            {
+                                if (SimulateMoveAndCheckSafety(r, c, move.Item1, move.Item2, isWhite))
+                                    return true;
+                            }
+                        }
+                    }
+                }
+                return false; // No legal moves available
+            }
+            public bool IsCheckmate(bool isWhiteKing)
+            {
+
+                // Step 1: Check if the king is in check
+                if (!IsKingInCheck(isWhiteKing))
+                {
+                    return false;
+                }
+
+                // Step 2: Iterate through all pieces of the current player
+                for (int r = 0; r < 8; r++)
+                {
+                    for (int c = 0; c < 4; c++)
+                    {
+                        var cell = GameBoard.GetCell(r, c);
+                        if (cell?.OccupiedBy != null && cell.OccupiedBy.IsWhite == isWhiteKing)
+                        {
+                            // Step 3: Check if any legal move gets the king out of check
+                            foreach (var move in GetLegalMoves(r, c))
+                            {
+                                if (SimulateMoveAndCheckSafety(r, c, move.Item1, move.Item2, isWhiteKing))
+                                {
+                                    return false; // A valid move exists
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Step 4: No valid moves exist, king is in checkmate
+                MessageBox.Show("No valid moves available. Checkmate!");
+                return true;
+            }
+
+
+            public bool IsStalemate(bool isWhiteKing)
+            {
+                if (IsKingInCheck(isWhiteKing)) return false;
+
+                for (int r = 0; r < 8; r++)
+                {
+                    for (int c = 0; c < 4; c++)
+                    {
+                        var cell = GameBoard.GetCell(r, c);
+                        if (cell?.OccupiedBy != null && cell.OccupiedBy.IsWhite == isWhiteKing)
+                        {
+                            foreach (var move in GetLegalMoves(r, c))
+                            {
+                                if (SimulateMoveAndCheckSafety(r, c, move.Item1, move.Item2, isWhiteKing))
+                                    return false;
+                            }
+                        }
+                    }
+                }
+
+                return true; // No legal moves available, king is not in check
+            }
+
+            public Cell FindKingCell(bool isWhiteKing)
+            {
+                for (int r = 0; r < 8; r++)
+                {
+                    for (int c = 0; c < 4; c++)
+                    {
+                        var cell = GameBoard.GetCell(r, c);
+                        if (cell?.OccupiedBy != null &&
+                            cell.OccupiedBy.Type == PieceType.King &&
+                            cell.OccupiedBy.IsWhite == isWhiteKing)
+                        {
+                            return cell;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            private IEnumerable<(int, int)> GetLegalMoves(int row, int col)
+            {
+                var piece = GameBoard.GetCell(row, col)?.OccupiedBy;
+                if (piece == null) yield break;
+
+                for (int r = 0; r < 8; r++)
+                {
+                    for (int c = 0; c < 4; c++)
+                    {
+                        if (IsLegalMove(piece, row, col, r, c))
+                        {
+                            MessageBox.Show($"Legal move for piece at ({row}, {col}): ({r}, {c})");
+                            yield return (r, c);
+                        }
+                    }
+                }
+            }
+
+            private bool SimulateMoveAndCheckSafety(int fromRow, int fromCol, int toRow, int toCol, bool isWhiteKing)
+            {
+                var fromCell = GameBoard.GetCell(fromRow, fromCol);
+                var toCell = GameBoard.GetCell(toRow, toCol);
+                var originalPiece = toCell.OccupiedBy;
+
+                // Simulate move
+                toCell.OccupiedBy = fromCell.OccupiedBy;
+                fromCell.OccupiedBy = null;
+
+                // Check if the king is safe
+                bool isSafe = !IsKingInCheck(isWhiteKing);
+
+                // Revert move
+                fromCell.OccupiedBy = toCell.OccupiedBy;
+                toCell.OccupiedBy = originalPiece;
+
+                return isSafe;
+            }
+
 
             /// <summary>
             /// Checks if moving 'piece' from (fromRow, fromCol) to (toRow, toCol) 
@@ -144,8 +295,7 @@ namespace Client
             /// </summary>
             private bool IsLegalMove(Piece piece, int fromRow, int fromCol, int toRow, int toCol)
             {
-                // Can't "move" to the same square
-                if (fromRow == toRow && fromCol == toCol) return false;
+                if (fromRow == toRow && fromCol == toCol) return false; // Cannot move to the same square
 
                 int rowDiff = toRow - fromRow;
                 int colDiff = toCol - fromCol;
@@ -156,120 +306,107 @@ namespace Client
                         return IsLegalPawnMove(piece, fromRow, fromCol, toRow, toCol);
 
                     case PieceType.King:
-                        // King moves 1 square in any direction
-                        if (Math.Abs(rowDiff) <= 1 && Math.Abs(colDiff) <= 1)
-                            return true;
-                        return false;
+                        // King moves one square in any direction
+                        return Math.Abs(rowDiff) <= 1 && Math.Abs(colDiff) <= 1;
 
                     case PieceType.Rook:
-                        // Rook moves along row or column
-                        if (rowDiff == 0 || colDiff == 0)
-                        {
-                            // Check if path is blocked
-                            return !IsPathBlocked(fromRow, fromCol, toRow, toCol);
-                        }
-                        return false;
+                        // Rook moves in straight lines, horizontally or vertically
+                        return (rowDiff == 0 || colDiff == 0) && !IsPathBlocked(fromRow, fromCol, toRow, toCol);
 
                     case PieceType.Bishop:
                         // Bishop moves diagonally
-                        if (Math.Abs(rowDiff) == Math.Abs(colDiff))
-                        {
-                            return !IsPathBlocked(fromRow, fromCol, toRow, toCol);
-                        }
-                        return false;
+                        return Math.Abs(rowDiff) == Math.Abs(colDiff) && !IsPathBlocked(fromRow, fromCol, toRow, toCol);
 
                     case PieceType.Knight:
-                        // Knight moves in "L" shape
-                        if ((Math.Abs(rowDiff) == 2 && Math.Abs(colDiff) == 1)
-                         || (Math.Abs(rowDiff) == 1 && Math.Abs(colDiff) == 2))
-                            return true;
-                        return false;
+                        // Knight moves in "L" shapes
+                        return (Math.Abs(rowDiff) == 2 && Math.Abs(colDiff) == 1) ||
+                               (Math.Abs(rowDiff) == 1 && Math.Abs(colDiff) == 2);
 
                     default:
                         return false;
                 }
             }
-
-            /// <summary>
-            /// Checks if a Pawn move is legal in "standard" chess sense:
-            /// no sideways, no en passant, no promotion. 
-            /// White pawns move up (-1 row), black pawns move down (+1 row).
-            /// </summary>
             private bool IsLegalPawnMove(Piece pawn, int fromRow, int fromCol, int toRow, int toCol)
             {
                 int direction = pawn.IsWhite ? -1 : 1;
 
-                // Single-step forward
+                // Standard forward move
                 if (toCol == fromCol && toRow == fromRow + direction)
                 {
-                    var targetCell = GameBoard.GetCell(toRow, toCol);
-                    if (targetCell?.OccupiedBy == null)
-                        return true;
-                    return false;
+                    return GameBoard.GetCell(toRow, toCol)?.OccupiedBy == null;
                 }
 
-                // Two-step from start row
-                // White pawns start at row=6, black at row=1 (8 rows total)
+                // Double forward move from starting position
                 int startRow = pawn.IsWhite ? 6 : 1;
                 if (fromRow == startRow && toCol == fromCol && toRow == fromRow + 2 * direction)
                 {
-                    var cellOne = GameBoard.GetCell(fromRow + direction, fromCol);
-                    var cellTwo = GameBoard.GetCell(toRow, toCol);
-                    if (cellOne?.OccupiedBy == null && cellTwo?.OccupiedBy == null)
-                        return true;
-                    return false;
+                    return GameBoard.GetCell(fromRow + direction, fromCol)?.OccupiedBy == null &&
+                           GameBoard.GetCell(toRow, toCol)?.OccupiedBy == null;
                 }
 
                 // Diagonal capture
                 if (Math.Abs(toCol - fromCol) == 1 && toRow == fromRow + direction)
                 {
-                    var targetCell = GameBoard.GetCell(toRow, toCol);
-                    // Must contain opponent piece
-                    if (targetCell?.OccupiedBy != null
-                        && targetCell.OccupiedBy.IsWhite != pawn.IsWhite)
-                    {
-                        return true;
-                    }
-                    return false;
+                    return GameBoard.GetCell(toRow, toCol)?.OccupiedBy?.IsWhite != pawn.IsWhite;
                 }
 
-                // If your Half Chess has sideways moves for pawns, add here.
+                // Sideways movement (strategic improvement)
+                if (toRow == fromRow && Math.Abs(toCol - fromCol) == 1)
+                {
+                    return GameBoard.GetCell(toRow, toCol)?.OccupiedBy == null;
+                }
 
                 return false;
             }
 
-            /// <summary>
-            /// Checks if any piece is blocking the path (except the final cell)
-            /// between (fromRow, fromCol) and (toRow, toCol).
-            /// Used for Rook and Bishop.
-            /// </summary>
             private bool IsPathBlocked(int fromRow, int fromCol, int toRow, int toCol)
             {
                 int rowDiff = toRow - fromRow;
                 int colDiff = toCol - fromCol;
-
-                int rowStep = (rowDiff == 0) ? 0 : (rowDiff > 0 ? 1 : -1);
-                int colStep = (colDiff == 0) ? 0 : (colDiff > 0 ? 1 : -1);
-
+                int rowStep = rowDiff == 0 ? 0 : (rowDiff > 0 ? 1 : -1);
+                int colStep = colDiff == 0 ? 0 : (colDiff > 0 ? 1 : -1);
                 int steps = Math.Max(Math.Abs(rowDiff), Math.Abs(colDiff));
 
                 int curRow = fromRow + rowStep;
                 int curCol = fromCol + colStep;
 
-                // Check intermediate squares (not including destination)
                 for (int i = 1; i < steps; i++)
                 {
-                    var cell = GameBoard.GetCell(curRow, curCol);
-                    if (cell == null) return false;
-                    if (cell.OccupiedBy != null)
-                        return true; // blocked
-
+                    if (GameBoard.GetCell(curRow, curCol)?.OccupiedBy != null) return true;
                     curRow += rowStep;
                     curCol += colStep;
                 }
 
-                return false; // not blocked
+                return false;
             }
+
+            public bool IsKingInCheck(bool isWhiteKing)
+            {
+                var kingCell = FindKingCell(isWhiteKing);
+                if (kingCell == null) return false;
+
+                for (int r = 0; r < 8; r++)
+                {
+                    for (int c = 0; c < 4; c++)
+                    {
+                        var cell = GameBoard.GetCell(r, c);
+                        if (cell?.OccupiedBy != null && cell.OccupiedBy.IsWhite != isWhiteKing)
+                        {
+                            if (IsLegalMove(cell.OccupiedBy, r, c, kingCell.Row, kingCell.Col))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+           
         }
     }
 }
+
+
+
+    

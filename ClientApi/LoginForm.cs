@@ -1,10 +1,12 @@
 ﻿using ClientApi.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -29,7 +31,11 @@ namespace ClientApi
             client.BaseAddress = new Uri(PATH);
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));          
+                new MediaTypeWithQualityHeaderValue("application/json"));
+
+            NameTextBox.Text = "ido";
+            IdTextBox.Text = "1";
+
 
         }
         static async Task<Player> GetPlayerAsync(string path)
@@ -42,7 +48,31 @@ namespace ClientApi
             }
             return player;
         }
+        static async Task<Player> UpdatePlayerAsync(Player player)
+        {
+            try
+            {
+                HttpResponseMessage response = await client.GetAsync(PATH + "api/TblPlayers/" + player.Id);                      
 
+                player = await response.Content.ReadAsAsync<Player>();                       
+                player.NumOfGames++;
+                response = await client.PutAsJsonAsync(PATH + "api/TblPlayers/" + player.Id, player);
+              
+                // If 204 No Content, assume success
+                if (response.StatusCode == HttpStatusCode.NoContent)                
+                    return player;                
+
+                player = await response.Content.ReadAsAsync<Player>();
+                            
+
+                return player;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Exception: {ex.Message}", "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
+        }
 
         private async void LoginButton_Click(object sender, EventArgs e)
         {
@@ -54,27 +84,38 @@ namespace ClientApi
             {
                 Player player = await GetPlayerAsync(PATH + LOGIN_PLAYER);
 
-                // ID doesn't exist in Database.
                 if (player == null)
                 {
-                    MessageBox.Show("Please register first.", "WARNNING", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Player not found. Please register first.", "WARNING", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                // ID exists but name is incorrect.
                 else if (player.Name.ToLower().Trim() != name.ToLower())
                 {
-                    MessageBox.Show("Incorrect data.", "WARNNING", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Incorrect data.", "WARNING", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                // All data correct
                 else
                 {
-                    FormClientBoard form = new FormClientBoard();
+                   
+                    Player updatedPlayer = await UpdatePlayerAsync(player);
+
+                    if (updatedPlayer == null)
+                    {
+                        MessageBox.Show("Failed to update player data.", "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    FormClientBoard form = new FormClientBoard(updatedPlayer);
+                    this.Hide();
                     form.ShowDialog();
                 }
             }
             else
             {
-                MessageBox.Show("Please enter both Name and ID.", "WARNNING", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter both Name and ID.", "WARNING", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
+
     }
 }

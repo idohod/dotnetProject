@@ -1,12 +1,6 @@
-﻿using Client;
+﻿using ClientApi.Models;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ClientApi
@@ -21,40 +15,57 @@ namespace ClientApi
         private int timeLeft;
         private int animationStep;
 
-        // For a simple "select and move"
         private PieceModels.Cell selectedCell;
         private const int CELL_SIZE = 60;
 
-        public FormClientBoard()
+        private bool isTimeSelected;
+        private Timer checkFlashTimer;
+        private Rectangle kingCheckSquare;
+        private bool isFlashingRed;
+
+        public FormClientBoard(Player player)
+
+
         {
+            MessageBox.Show($"Welcome {player.Name.Trim()}!\nYour details:\nId: {player.Id}\nPhone: {player.Phone}\nCountry: {player.Country}\nNumber of Games: {player.NumOfGames}",
+                            "WELCOME",
+                            MessageBoxButtons.OK);
             InitializeComponent();
+
+            isTimeSelected = false;
+            turnTimer = new Timer { Interval = 1000 };
+            turnTimer.Tick += TurnTimer_Tick;
         }
 
         private void FormClientBoard_Load(object sender, EventArgs e)
         {
-            // Initialize a new HalfChessGame
             game = new PieceModels.HalfChessGame();
+            game.MoveMade += OnMoveMade;
 
-            // Populate time combo
             comboBoxTime.Items.AddRange(new object[] { 10, 20, 30, 60 });
             comboBoxTime.SelectedIndex = 1;
 
-            // Prepare scribble Bitmap
+            this.DoubleBuffered = true;
+
             userDrawingBitmap = new Bitmap(panelBoard.Width, panelBoard.Height);
             userDrawingGraphics = Graphics.FromImage(userDrawingBitmap);
             userDrawingGraphics.Clear(Color.Transparent);
 
-            // Default time
             timeLeft = 20;
             lblTimeLeft.Text = "Time left: " + timeLeft;
 
-            // Force repaint
             panelBoard.Invalidate();
         }
-
+        private void animationTimer_Tick(object sender, EventArgs e)
+        {
+            animationStep++;
+            animationStep %= 6;
+            panelBoard.Invalidate();
+        }
         private void panelBoard_Paint(object sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
+
             g.Clear(Color.White);
 
             for (int r = 0; r < 8; r++)
@@ -68,6 +79,10 @@ namespace ClientApi
                     {
                         cellColor = Color.LightBlue;
                     }
+                    if (rect == kingCheckSquare && isFlashingRed)
+                    {
+                        cellColor = Color.Red;
+                    }
 
                     using (var brush = new SolidBrush(cellColor))
                     {
@@ -79,12 +94,11 @@ namespace ClientApi
                     }
 
                     var boardCell = game.GameBoard.GetCell(r, c);
-                    if (boardCell != null && boardCell.OccupiedBy != null)
+                    if (boardCell?.OccupiedBy != null)
                     {
                         var piece = boardCell.OccupiedBy;
                         string symbol = PieceSymbol(piece);
 
-                        // Use a darker color for white pieces to improve visibility
                         Color textColor = piece.IsWhite ? Color.Silver : Color.Black;
 
                         using (var textBrush = new SolidBrush(textColor))
@@ -98,8 +112,6 @@ namespace ClientApi
             g.DrawImage(userDrawingBitmap, Point.Empty);
         }
 
-
-        // Minimal: return a single-letter or short string for each piece type
         private string PieceSymbol(PieceModels.Piece piece)
         {
             if (piece == null) return "";
@@ -114,32 +126,33 @@ namespace ClientApi
             }
         }
 
-        // Handle the user's attempt to click & move a piece
         private void panelBoard_MouseDown(object sender, MouseEventArgs e)
         {
-            // Convert click coordinates to board row/col
+            if (e.Button == MouseButtons.Right)
+            {
+                isDrawing = true;
+                lastMousePos = e.Location;
+            }
+
             int col = e.X / CELL_SIZE;
             int row = e.Y / CELL_SIZE;
             if (row < 0 || row > 7 || col < 0 || col > 3) return;
 
             PieceModels.Cell clickedCell = game.GameBoard.GetCell(row, col);
 
-            // If we have no cell selected yet, try to select a piece
             if (selectedCell == null)
             {
-                if (clickedCell.OccupiedBy != null)
+                if (clickedCell?.OccupiedBy != null && clickedCell.OccupiedBy.IsWhite == game.IsWhiteTurn)
                 {
-                    // Check if piece color matches the current turn
-                    if (clickedCell.OccupiedBy.IsWhite == game.IsWhiteTurn)
-                    {
-                        selectedCell = clickedCell;
-                    }
+                    selectedCell = clickedCell;
                 }
             }
             else
             {
-                // We already have a selected cell, so let's attempt a move
                 bool success = game.MovePiece(selectedCell.Row, selectedCell.Col, row, col);
+                ResetTurnTimer();
+                comboBoxTime.Enabled = false;
+
                 selectedCell = null;
             }
 
@@ -174,29 +187,130 @@ namespace ClientApi
         {
             timeLeft--;
             lblTimeLeft.Text = "Time left: " + timeLeft;
+
             if (timeLeft <= 0)
             {
                 turnTimer.Stop();
+
                 MessageBox.Show("Time's up!");
+                Application.Exit();
+
+                comboBoxTime.SelectedIndex = 1;
+                comboBoxTime.Enabled = true;
+
+                isTimeSelected = false;
             }
         }
 
-        private void animationTimer_Tick(object sender, EventArgs e)
+        private void comboBoxTime_SelectedIndexChanged(object sender, EventArgs e)
         {
-            animationStep++;
-            animationStep %= 6;
+            if (!isTimeSelected)
+            {
+                timeLeft = Convert.ToInt32(comboBoxTime.SelectedItem);
+                lblTimeLeft.Text = "Time left: " + timeLeft;
+                turnTimer.Start();
+                comboBoxTime.Enabled = true;
+                isTimeSelected = true;
+            }
+            else
+            {
+                comboBoxTime.Enabled = false;
+                ResetTurnTimer();
+            }
+        }
+
+        private void ResetTurnTimer()
+        {
+            turnTimer.Stop();
+            timeLeft = Convert.ToInt32(comboBoxTime.SelectedItem);
+            lblTimeLeft.Text = "Time left: " + timeLeft;
+            turnTimer.Start();
+        }
+
+        private void OnMoveMade()
+        {
+
+            UpdateGameState();
+        }
+
+        public void UpdateGameState()
+        {
+            if (game.IsCheckmate(true))
+            {
+                MessageBox.Show("Checkmate! Black wins!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
+               // ResetGame();
+                return;
+            }
+
+            if (game.IsCheckmate(false))
+            {
+                MessageBox.Show("Checkmate! White wins!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
+               // ResetGame();
+                return;
+            }
+
+            // Flash the king's square if in check
+            bool isWhiteKingInCheck = game.IsKingInCheck(true);
+            bool isBlackKingInCheck = game.IsKingInCheck(false);
+
+            if (isWhiteKingInCheck || isBlackKingInCheck)
+            {
+                bool isWhiteKing = isWhiteKingInCheck;
+                var kingCell = game.FindKingCell(isWhiteKing);
+
+                if (kingCell != null)
+                {
+                    StartCheckAnimation(kingCell.Row, kingCell.Col);
+                }
+            }
+            else
+            {
+                StopCheckAnimation();
+            }
+        }
+
+
+
+
+
+
+        private void StartCheckAnimation(int row, int col)
+        {
+            kingCheckSquare = new Rectangle(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            isFlashingRed = true;
+
+            if (checkFlashTimer == null)
+            {
+                checkFlashTimer = new Timer { Interval = 500 };
+                checkFlashTimer.Tick += CheckFlashTimer_Tick;
+            }
+
+            checkFlashTimer.Start();
+        }
+
+        private void StopCheckAnimation()
+        {
+            if (checkFlashTimer != null)
+            {
+                checkFlashTimer.Stop();
+                checkFlashTimer.Dispose();
+                checkFlashTimer = null;
+            }
+
+            kingCheckSquare = Rectangle.Empty;
             panelBoard.Invalidate();
         }
 
-        private void panelBoard_MouseDown(object sender, MouseEventArgs e, bool isDrawMode)
+        private void CheckFlashTimer_Tick(object sender, EventArgs e)
         {
-            // This line is just to avoid collisions if you used the Designer to create this event:
-            // Typically you'll unify your MouseDown logic in one method. 
+            isFlashingRed = !isFlashingRed;
+            panelBoard.Invalidate(kingCheckSquare);
         }
 
-        private void panelBoard_MouseMove(object sender, MouseEventArgs e, bool isDrawMode)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // Same note as above
+            game.MoveMade -= OnMoveMade;
+            base.OnFormClosing(e);
         }
     }
 }
