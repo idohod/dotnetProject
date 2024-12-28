@@ -1,4 +1,4 @@
-﻿namespace ClientApi
+﻿namespace Client
 {
     partial class LoginForm
     {

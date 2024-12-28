@@ -1,5 +1,4 @@
-﻿using ClientApi.Models;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,11 +8,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ClientApi
+namespace Client
 {
     public partial class LoginForm : Form
     {
@@ -37,6 +37,20 @@ namespace ClientApi
             IdTextBox.Text = "1";
 
 
+
+        }
+        static async Task<Uri> CreateProductAsync(Game product)
+        {
+            HttpResponseMessage response = await client.PostAsJsonAsync(PATH + "api/TblGames", product);
+            response.EnsureSuccessStatusCode();
+
+            // return URI of the created resource.
+            return response.Headers.Location;
+        }
+        static async Task<HttpStatusCode> DeleteProductAsync(string id)
+        {
+            HttpResponseMessage response = await client.DeleteAsync(PATH + "api/TblGames/" + id);
+            return response.StatusCode;
         }
         static async Task<Player> GetPlayerAsync(string path)
         {
@@ -57,10 +71,10 @@ namespace ClientApi
                 player = await response.Content.ReadAsAsync<Player>();                       
                 player.NumOfGames++;
                 response = await client.PutAsJsonAsync(PATH + "api/TblPlayers/" + player.Id, player);
-              
+
                 // If 204 No Content, assume success
-                if (response.StatusCode == HttpStatusCode.NoContent)                
-                    return player;                
+                if (response.StatusCode == HttpStatusCode.NoContent)
+                    return player;
 
                 player = await response.Content.ReadAsAsync<Player>();
                             
@@ -80,6 +94,7 @@ namespace ClientApi
             string id = IdTextBox.Text;
             string LOGIN_PLAYER = "api/TblPlayers/" + id;
 
+          
             if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(id))
             {
                 Player player = await GetPlayerAsync(PATH + LOGIN_PLAYER);

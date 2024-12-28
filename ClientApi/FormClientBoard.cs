@@ -1,9 +1,12 @@
-﻿using ClientApi.Models;
-using System;
+﻿using System;
 using System.Drawing;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ClientApi
+namespace Client
 {
     public partial class FormClientBoard : Form
     {
@@ -22,11 +25,22 @@ namespace ClientApi
         private Timer checkFlashTimer;
         private Rectangle kingCheckSquare;
         private bool isFlashingRed;
+        private bool isGameOver = false;
+        private DateTime gameStartTime;
+        //private Game CurrentGame;
+        private int CurruntPlayerId;
+        private const string PATH = "https://localhost:7272/";
+        private static HttpClient client = new HttpClient();
+
+
+
 
         public FormClientBoard(Player player)
 
 
         {
+
+            CurruntPlayerId = player.Id;
             MessageBox.Show($"Welcome {player.Name.Trim()}!\nYour details:\nId: {player.Id}\nPhone: {player.Phone}\nCountry: {player.Country}\nNumber of Games: {player.NumOfGames}",
                             "WELCOME",
                             MessageBoxButtons.OK);
@@ -39,6 +53,15 @@ namespace ClientApi
 
         private void FormClientBoard_Load(object sender, EventArgs e)
         {
+            client.BaseAddress = new Uri(PATH);
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+
+
+            gameStartTime = DateTime.UtcNow;
+           // CurrentGame = new Game(CurruntPlayerId, gameStartTime);
+
             game = new PieceModels.HalfChessGame();
             game.MoveMade += OnMoveMade;
 
@@ -185,20 +208,16 @@ namespace ClientApi
 
         private void TurnTimer_Tick(object sender, EventArgs e)
         {
+            if (isGameOver) return; // Prevent actions after the game is over
+
             timeLeft--;
             lblTimeLeft.Text = "Time left: " + timeLeft;
 
             if (timeLeft <= 0)
             {
                 turnTimer.Stop();
-
                 MessageBox.Show("Time's up!");
-                Application.Exit();
-
-                comboBoxTime.SelectedIndex = 1;
-                comboBoxTime.Enabled = true;
-
-                isTimeSelected = false;
+                EndGame("Time's up!");
             }
         }
 
@@ -235,17 +254,18 @@ namespace ClientApi
 
         public void UpdateGameState()
         {
+            
             if (game.IsCheckmate(true))
             {
                 MessageBox.Show("Checkmate! Black wins!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
-               // ResetGame();
+                EndGame("");
                 return;
             }
 
             if (game.IsCheckmate(false))
             {
                 MessageBox.Show("Checkmate! White wins!", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Information);
-               // ResetGame();
+                // ResetGame();
                 return;
             }
 
@@ -268,12 +288,33 @@ namespace ClientApi
                 StopCheckAnimation();
             }
         }
+        private  void EndGame(string result)
+        {
+            if (isGameOver) return;
+            isGameOver = true;
+           
+                DateTime gameEndTime = DateTime.UtcNow;
+                int duration = (int)(gameEndTime - gameStartTime).TotalSeconds;
+            Application.Exit();
+              
+        }
+
+       
 
 
+        private void LogGameResult(Game game)
+        {
+            // Example method to log game data, adjust as necessary
+            Console.WriteLine(game.ToString());
+        }
+        static async Task<Uri> CreateGameAsync(Game game)
+        {
+            HttpResponseMessage response = await client.PostAsJsonAsync(PATH + "api/TblGames", game);
+            response.EnsureSuccessStatusCode();
 
-
-
-
+            // return URI of the created resource.
+            return response.Headers.Location;
+        }
         private void StartCheckAnimation(int row, int col)
         {
             kingCheckSquare = new Rectangle(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
@@ -311,6 +352,7 @@ namespace ClientApi
         {
             game.MoveMade -= OnMoveMade;
             base.OnFormClosing(e);
+            Application.Exit();
         }
     }
 }

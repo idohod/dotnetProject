@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ClientApi
+namespace Client
 {
     public class PieceModels
     {
@@ -261,7 +261,6 @@ namespace ClientApi
                     {
                         if (IsLegalMove(piece, row, col, r, c))
                         {
-                            MessageBox.Show($"Legal move for piece at ({row}, {col}): ({r}, {c})");
                             yield return (r, c);
                         }
                     }
