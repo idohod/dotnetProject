@@ -25,18 +25,54 @@ namespace finalProject.Pages.Players
 
 
        public List<TblPlayers> nameAndGames { get; set; } = new();
-        public List<TblDates> TblDates { get; set; } = new(); 
+        public List<TblDates> TblDates { get; set; } = new();
+        public List<TblGames> TblGames { get; set; } = new();
+
 
         public Dictionary<int, List<TblPlayers>> PlayersGroupedByGames { get; set; } = new();
 
 
         public Dictionary<string, List<TblPlayers>> PlayersGroupedByCountry { get; set; } = new();
 
+        public List<string> PlayerNames { get; set; } = new List<string>();
+        public List<TblGames> SelectedPlayerGames { get; set; } = new List<TblGames>();
+
+        [BindProperty]
+        public string SelectedPlayerName { get; set; } = string.Empty;
+
+
+
+        public async Task OnPostPlayerNamesAsync()
+        {
+            // Handle game fetching for the selected player
+            if (!string.IsNullOrEmpty(SelectedPlayerName))
+            {
+                SelectedPlayerGames = await _context.TblGames
+                    .Where(game => _context.TblPlayers
+                        .Any(player => player.Id == game.PlayerId
+                                       && (player.Name ?? string.Empty).ToLower() == SelectedPlayerName.ToLower()))
+                    .ToListAsync();
+            }
+
+            // Ensure PlayerNames is repopulated after Post
+            PlayerNames = await _context.TblPlayers
+                .Select(p => (p.Name ?? string.Empty).ToLower())
+                .Distinct()
+                .OrderBy(name => name)
+                .ToListAsync();
+        }
+
+
 
 
         public async Task OnGetAsync()
         {
             TblPlayers = await _context.TblPlayers.ToListAsync();
+        }
+
+        public async Task OnPostAllGamesAsync()
+        {
+            TblGames = await _context.TblGames.ToListAsync();
         }
 
         public async Task OnPostGroupByCountryAsync()

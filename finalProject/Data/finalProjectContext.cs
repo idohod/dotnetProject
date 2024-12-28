@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using finalProject.Models;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace finalProject.Data
 {
@@ -16,6 +11,8 @@ namespace finalProject.Data
 
         public DbSet<finalProject.Models.TblPlayers> TblPlayers { get; set; } = default!;
         public DbSet<finalProject.Models.TblDates> TblDates { get; set; } = default!;
+        public DbSet<finalProject.Models.TblGames> TblGames { get; set; } = default!;
+
 
     }
 }

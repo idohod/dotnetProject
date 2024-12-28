@@ -12,15 +12,106 @@
 </p>
 
 <form action="" method="post">
-    <button asp-page-handler="Sort" class="btn btn-primary"> Sort All by name (case-insensitive)</button>
-    <button asp-page-handler="CaseSen" class="btn btn-primary"> Sort All and show dates</button>
-    <button asp-page-handler="GroupByCountry" class="btn btn-primary"> Group By Country</button>
-    <button asp-page-handler="GroupByGames" class="btn btn-primary"> Group By Num Of Games</button>
-    <button asp-page-handler="NameAndGames" class="btn btn-primary"> Name And Games</button>
-    <button asp-page-handler="FirstByCountry" class="btn btn-primary"> FirstByCountry</button>
+    <!-- Group the first set of buttons -->
+    <div>
+        <button asp-page-handler="Sort" class="btn btn-primary">Sort All by name (case-insensitive)</button>
+        <button asp-page-handler="CaseSen" class="btn btn-primary">Sort All and show dates</button>
+        <button asp-page-handler="GroupByCountry" class="btn btn-primary">Group By Country</button>
+        <button asp-page-handler="GroupByGames" class="btn btn-primary">Group By Num Of Games</button>
+        <button asp-page-handler="NameAndGames" class="btn btn-primary">Name And Games</button>
+        <button asp-page-handler="FirstByCountry" class="btn btn-primary">FirstByCountry</button>
+        <button asp-page-handler="AllGames" class="btn btn-primary">AllGames</button>
+    </div>
 
-
+    <!-- Place the last button in its own container -->
+    <div style="margin-top: 20px;">
+        <button asp-page-handler="PlayerNames" class="btn btn-primary">PlayerNames</button>
+    </div>
 </form>
+
+<form method="post">
+    <div>
+        <label for="playerSelect">Select Player:</label>
+        <select id="playerSelect" name="SelectedPlayerName" asp-for="SelectedPlayerName">
+            <option value="">-- Choose a Player --</option>
+            @foreach (var playerName in Model.PlayerNames)
+            {
+                if (string.Equals(playerName, Model.SelectedPlayerName, StringComparison.OrdinalIgnoreCase))
+                {
+                    <option value="@playerName" selected="selected">@playerName</option>
+                }
+                else
+                {
+                    <option value="@playerName">@playerName</option>
+                }
+            }
+        </select>
+    </div>
+
+    <button type="submit">Get Games</button>
+</form>
+
+
+@if (Model.SelectedPlayerGames?.Count > 0)
+{
+    <h2>Games Played by @Model.SelectedPlayerName</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Game ID</th>
+                <th>Start Time</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var game in Model.SelectedPlayerGames)
+            {
+                <tr>
+                    <td>@game.Id</td>
+
+                    <td>@game.StartTime</td>
+                    <td>@game.Duration</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (!string.IsNullOrEmpty(Model.SelectedPlayerName))
+{
+    <p>No games found for @Model.SelectedPlayerName.</p>
+}
+
+ 
+
+@if (Model.TblGames != null && Model.TblGames.Count > 0)
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Game ID</th>
+                <th>Player ID</th>
+
+                <th>Start Time</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var game in Model.TblGames)
+            {
+                <tr>
+                    <td>@game.Id</td>
+
+                    <td>@game.PlayerId</td>
+                    <td>@game.StartTime</td>
+                    <td>@game.Duration</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
 @if(Model.PlayersGroupedByGames !=null && Model.PlayersGroupedByGames.Count > 0)
 {
     @foreach (var group in Model.PlayersGroupedByGames)
